@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.100"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.5"
+    }
   }
 }
 
@@ -35,12 +39,22 @@ resource "azurerm_subnet" "web_subnet" {
   address_prefixes     = ["10.0.1.0/24"]
 }
 
-# DB Subnet
+# DB Subnet with required delegation
 resource "azurerm_subnet" "db_subnet" {
   name                 = "db-subnet"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["10.0.2.0/24"]
+
+  delegation {
+    name = "postgresql_delegation"
+    service_delegation {
+      name = "Microsoft.DBforPostgreSQL/flexibleServers"
+      actions = [
+        "Microsoft.Network/virtualNetworks/subnets/action"
+      ]
+    }
+  }
 }
 
 # Web NSG
@@ -115,3 +129,6 @@ resource "azurerm_subnet_network_security_group_association" "db_assoc" {
   subnet_id                 = azurerm_subnet.db_subnet.id
   network_security_group_id = azurerm_network_security_group.db_nsg.id
 }
+
+
+
