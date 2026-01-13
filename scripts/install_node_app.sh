@@ -1,30 +1,40 @@
 #!/bin/bash
 set -e
-exec > /var/log/startup.log 2>&1
 
-echo "Stopping default web servers"
-systemctl stop nginx || true
-systemctl disable nginx || true
-systemctl stop apache2 || true
-systemctl disable apache2 || true
+# Log everything
+exec > /var/log/install-node.log 2>&1
 
-echo "Installing Node.js"
+echo "Updating system..."
 apt-get update -y
+
+echo "Installing Node.js..."
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-apt-get install -y nodejs git
+apt-get install -y nodejs
 
-echo "Installing PM2"
-npm install -g pm2
+echo "Node version:"
+node -v
+npm -v
 
-echo "Fetching Node.js app"
-mkdir -p /opt/node-app
-cd /opt/node-app
+echo "Creating app directory..."
+mkdir -p /opt/nodeapp
+cd /opt/nodeapp
 
-git clone https://github.com/Poison-Iveey/sample-node-app.git .
+echo "Creating Node.js app..."
+cat <<EOF > index.js
+const http = require('http');
 
-echo "Installing dependencies"
-npm install
+const PORT = 3000;
+const HOST = '0.0.0.0';
 
-echo "Starting Node app"
-pm2 start index.js --name node-app
-pm2 save
+const server = http.createServer((req, res) => {
+  res.writeHead(200, {'Content-Type': 'text/plain'});
+  res.end('Hello from Node.js running on VM Scale Set\n');
+});
+
+server.listen(PORT, HOST, () => {
+  console.log(\`Server running at http://\${HOST}:\${PORT}/\`);
+});
+EOF
+
+echo "Starting Node.js app..."
+nohup node index.js &
